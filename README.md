@@ -6,7 +6,7 @@ This project is a tool to organize t-shirt orders for a sports event. It reads d
 
 To run this project, you'll need the following dependencies:
 
-- `pandas`: A powerful data manipulation library.
+- `pandas`: data manipulation library
 - `gspread`: A Python API for Google Sheets.
 - `gspread_dataframe`: An extension to gspread for working with Pandas DataFrames in Google Sheets.
 
