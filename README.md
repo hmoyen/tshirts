@@ -1,12 +1,12 @@
 # T-Shirts Organizer
 
-This project is a tool to organize t-shirt orders for a sports event. It reads data from a Google Sheets spreadsheet, processes it to generate CSV files, and updates the spreadsheet with the processed information.
+This project is a tool to organize t-shirt orders for our tennis team. It reads data from a Google Sheets spreadsheet, processes it to generate CSV files, and updates the spreadsheet with the processed information.
 
 ## Dependencies
 
 To run this project, you'll need the following dependencies:
 
-- `pandas`: A powerful data manipulation library.
+- `pandas`: data manipulation library
 - `gspread`: A Python API for Google Sheets.
 - `gspread_dataframe`: An extension to gspread for working with Pandas DataFrames in Google Sheets.
 
