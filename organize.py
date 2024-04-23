@@ -1,9 +1,22 @@
 import gspread
 import pandas as pd
 from gspread_dataframe import set_with_dataframe
+import gspread_formatting as gsf
+
+# Autenticar no Google Sheets
 gc = gspread.service_account(filename='/home/lena/tshirts/camisetas-421115-29a129e1e422.json')
 
+# Abrir a planilha
 spreadsheet = gc.open_by_url('https://docs.google.com/spreadsheets/d/1pOwDcS8K-NmGAzcw7x8UO1V3FJPFbpU5AVHpKdlJzao/edit#gid=441120012')
+
+# Obter a primeira planilha da planilha
+sheet = spreadsheet.sheet1
+data = sheet.get_all_records()
+
+# Apagar as planilhas existentes
+for worksheet in spreadsheet.worksheets():
+    if worksheet.title != "respostas":
+        spreadsheet.del_worksheet(worksheet)
 
 # Definir os cabeçalhos esperados
 expected_headers = ['Carimbo de data/hora', 'Endereço de e-mail', 'Nome completo',
@@ -12,42 +25,17 @@ expected_headers = ['Carimbo de data/hora', 'Endereço de e-mail', 'Nome complet
                     'CAMISETA MODALIDADE TÊNIS PRETA E AMARELA', 'Se personalizada (3), qual o nome atrás?',
                     'CAMISETA RAQUETES PRETA', 'CAMISETA FEDERER BRANCA']
 
-# Obter todos os dados
-sheet = spreadsheet.sheet1
-data = sheet.get_all_records()
-# Apagar as planilhas existentes
-worksheet_personalizadas = None
-worksheet_total_camisetas = None
-worksheet_pedido_pessoa = None
-
-for worksheet in spreadsheet.worksheets():
-    if worksheet.title == "Camisetas Personalizadas":
-        worksheet_personalizadas = worksheet
-    elif worksheet.title == "Total de Camisetas":
-        worksheet_total_camisetas = worksheet
-    elif worksheet.title == "Pedido por Pessoa":
-        worksheet_pedido_pessoa = worksheet
-
-if worksheet_personalizadas:
-    spreadsheet.del_worksheet(worksheet_personalizadas)
-
-if worksheet_total_camisetas:
-    spreadsheet.del_worksheet(worksheet_total_camisetas)
-
-if worksheet_pedido_pessoa:
-    spreadsheet.del_worksheet(worksheet_pedido_pessoa)
-
-
-# Manipular os dados para criar os CSVs
+# Criar dicionários para armazenar os dados processados
 camisetas_personalizadas = []
 total_camisetas = {}
 pedido_por_pessoa = {}
 
+# Processar os dados
 for row in data:
     # Normalizar o nome completo
     nome_completo = row['Nome completo'].strip().lower()
     
-    # Verifica se há personalização em cada camiseta e adiciona ao CSV de camisetas personalizadas
+    # Verificar se há personalização em cada camiseta e adicioná-la à lista de camisetas personalizadas
     personalizacao_azul_branca = row['Se personalizada (1), qual o nome atrás?']
     personalizacao_azul_amarela = row['Se personalizada (2), qual o nome atrás?']
     personalizacao_preta_amarela = row['Se personalizada (3), qual o nome atrás?']
@@ -87,7 +75,10 @@ for row in data:
                                              'CAMISETA FEDERER BRANCA': ''}
     for camiseta, tamanho in row.items():
         if camiseta.startswith('CAMISETA') and tamanho:
-            pedido_por_pessoa[nome_completo][camiseta] = tamanho
+            if pedido_por_pessoa[nome_completo][camiseta]:
+                pedido_por_pessoa[nome_completo][camiseta] += ',' + tamanho
+            else:
+                pedido_por_pessoa[nome_completo][camiseta] = tamanho
             pedido_por_pessoa[nome_completo]['Total camisetas'] += 1
 
 # Calcular o número de personalizações para cada pessoa
@@ -97,7 +88,7 @@ for pessoa in pedido_por_pessoa.values():
     pessoa['Total personalizacoes'] = num_personalizacoes
 
 # Calcular o valor total do pedido por pessoa
-valor_camiseta = 40
+valor_camiseta = 40.60
 valor_personalizacao = 15
 
 for pessoa in pedido_por_pessoa.values():
@@ -130,7 +121,39 @@ set_with_dataframe(worksheet_total_camisetas, total_camisetas_df)
 worksheet_pedido_pessoa = spreadsheet.add_worksheet(title="Pedido por Pessoa", rows=1000, cols=20)
 set_with_dataframe(worksheet_pedido_pessoa, pedido_por_pessoa_df)
 
-# Salvar os DataFrames como arquivos CSV
-camisetas_personalizadas_df.to_csv('camisetas_personalizadas.csv', index=False)
-total_camisetas_df.to_csv('total_camisetas.csv', index=False)
-pedido_por_pessoa_df.to_csv('pedido_por_pessoa.csv', index=False)
+# Definir tons de azul para as cores de fundo
+background_colors = [gsf.Color(0.8, 0.9, 1), gsf.Color(0.7, 0.85, 1)]
+
+# Aplicar formatação
+gsf.format_cell_range(worksheet_personalizadas, 'A1:Z1', gsf.cellFormat(textFormat=gsf.textFormat(bold=True)))
+gsf.format_cell_range(worksheet_total_camisetas, 'A1:Z1', gsf.cellFormat(textFormat=gsf.textFormat(bold=True)))
+gsf.format_cell_range(worksheet_pedido_pessoa, 'A1:Z1', gsf.cellFormat(textFormat=gsf.textFormat(bold=True)))
+
+gsf.format_cell_range(worksheet_personalizadas, 'A2:Z1000', gsf.cellFormat(backgroundColor=background_colors[0]))
+gsf.format_cell_range(worksheet_total_camisetas, 'A2:Z1000', gsf.cellFormat(backgroundColor=background_colors[0]))
+gsf.format_cell_range(worksheet_pedido_pessoa, 'A2:Z1000', gsf.cellFormat(backgroundColor=background_colors[0]))
+
+gsf.format_cell_range(worksheet_personalizadas, 'A:Z', gsf.cellFormat(textFormat=gsf.textFormat(fontFamily="Nunito")))
+gsf.format_cell_range(worksheet_total_camisetas, 'A:Z', gsf.cellFormat(textFormat=gsf.textFormat(fontFamily="Nunito")))
+gsf.format_cell_range(worksheet_pedido_pessoa, 'A:Z', gsf.cellFormat(textFormat=gsf.textFormat(fontFamily="Nunito")))
+
+gsf.format_cell_range(worksheet_personalizadas, 'A:Z', gsf.cellFormat(borders=gsf.Borders(top=gsf.Border(style='SOLID'), 
+                                                                                            bottom=gsf.Border(style='SOLID'), 
+                                                                                            left=gsf.Border(style='SOLID'), 
+                                                                                            right=gsf.Border(style='SOLID'))))
+gsf.format_cell_range(worksheet_total_camisetas, 'A:Z', gsf.cellFormat(borders=gsf.Borders(top=gsf.Border(style='SOLID'), 
+                                                                                             bottom=gsf.Border(style='SOLID'), 
+                                                                                             left=gsf.Border(style='SOLID'), 
+                                                                                             right=gsf.Border(style='SOLID'))))
+gsf.format_cell_range(worksheet_pedido_pessoa, 'A:Z', gsf.cellFormat(borders=gsf.Borders(top=gsf.Border(style='SOLID'), 
+                                                                                         bottom=gsf.Border(style='SOLID'), 
+                                                                                         left=gsf.Border(style='SOLID'), 
+                                                                                         right=gsf.Border(style='SOLID'))))
+
+# Intercale as linhas com cores diferentes
+for worksheet in [worksheet_pedido_pessoa]:
+    rows = worksheet.get_all_values()
+    for i, row in enumerate(rows):
+        if i % 2 == 0:
+            gsf.format_cell_range(worksheet, f'A{i+1}:Z{i+1}', gsf.cellFormat(backgroundColor=background_colors[1]))
+
